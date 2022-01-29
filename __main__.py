@@ -3,14 +3,9 @@ import pygame
 from pygame.locals import *
 import sys
 
-from screens import load_screens
+from screens import load_screens, draw_current_screen
 
 BOXICON = pygame.image.load("assets/Box.png")
-GSTATE = 'LoadingScreen'
-
-def set_gstate(gstate):
-    global GSTATE
-    GSTATE = gstate
 
 pygame.init()
 window = pygame.display.set_mode((800, 600), pygame.RESIZABLE)
@@ -18,7 +13,7 @@ pygame.display.set_caption("Box")
 pygame.display.set_icon(BOXICON)
 min_size = (800, 600)
 
-screens = load_screens(window, set_gstate)
+screens = load_screens(window)
 
 while True:
     for event in pygame.event.get():
@@ -31,8 +26,7 @@ while True:
                 width, height = min_size
             window = pygame.display.set_mode((width, height), pygame.RESIZABLE)
 
-    screens[GSTATE].draw()
-    screens[GSTATE].update()
+    draw_current_screen(screens, window)
 
     pygame.display.update()
     time.sleep(0.001)

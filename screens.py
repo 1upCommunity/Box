@@ -1,6 +1,54 @@
 import pygame
 import opensimplex
 import random
+import logging
+import os
+pygame.init()
+logging.basicConfig(level=logging.DEBUG)
+
+BUTTON_COLOR_NORMAL = (170, 170, 170)
+BUTTON_COLOR_HOVER = (100, 100, 100)
+BUTTON_COLOR_PRESSED = (50, 50, 50)
+assets = {}
+
+GSTATE = 'LoadingScreen'
+
+pygame.mouse.set_cursor(*pygame.cursors.arrow)
+
+def set_gstate(gstate):
+    global GSTATE
+    GSTATE = gstate
+
+mouse_pos = (0, 0)
+mouse_down = False
+
+class button():
+    def __init__(self, color, x, y, width, height, text=''):
+        self.color = color
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.text = text
+        self.font = pygame.font.Font("assets/press_start.ttf", 20)
+
+    def draw(self, win):
+        pygame.draw.rect(win, self.color, (self.x,self.y,self.width,self.height),0)
+    
+        if self.text != '':
+            text = self.font.render(self.text, 1, (255,255,255))
+            win.blit(text, (self.x + (self.width/2 - text.get_width()/2), self.y + (self.height/2 - text.get_height()/2)))
+
+    def is_over(self, pos):
+        #Pos is the mouse position or a tuple of (x,y) coordinates
+        if pos[0] > self.x and pos[0] < self.x + self.width:
+            if pos[1] > self.y and pos[1] < self.y + self.height:
+                pygame.mouse.set_cursor(*pygame.cursors.tri_left)
+                self.color = BUTTON_COLOR_HOVER
+                return True
+        self.color = BUTTON_COLOR_NORMAL
+        pygame.mouse.set_cursor(*pygame.cursors.arrow)
+        return False
 
 class LoadingScreen:
     def __init__(self, window, gstate_setter):
@@ -18,6 +66,39 @@ class LoadingScreen:
         self.loading_text_rect = self.loading_text.get_rect()
         self.frame = 0
         self.gstate_setter = gstate_setter
+        
+        self.current_index = 0
+        self.assets_to_load = [
+            "assets/Box.png",
+            "assets/click.wav",
+            "assets/coin.wav",
+            "assets/press_start.ttf",
+            "assets/music_fast.mp3",
+            "assets/music_slow.mp3",
+        ]
+
+    def load_asset_current(self):
+        if self.current_index >= len(self.assets_to_load):
+            self.gstate_setter('MenuScreen')
+            logging.info("Loaded all assets")
+            return
+
+        asset_name = self.assets_to_load[self.current_index]
+        if asset_name not in assets:
+            if '.' in asset_name:
+                asset_type = asset_name.split('.')[1]
+                if asset_type == 'png':
+                    assets[asset_name] = pygame.image.load(asset_name)
+                elif asset_type == 'wav' or asset_type == 'mp3':
+                    assets[asset_name] = pygame.mixer.Sound(asset_name)
+                elif asset_type == 'ttf':
+                    assets[asset_name] = pygame.font.Font(asset_name, 20)
+                else:
+                    logging.error("Unknown asset type: " + asset_type)
+            else:
+                if os.isdir(asset_name):
+                    logging.warn("Asset name has no extension: " + asset_name)
+        self.current_index += 1
 
     def update(self):
         self.transparency += self.transparency_step
@@ -30,6 +111,9 @@ class LoadingScreen:
             self.current_flashing_text += 1
             if self.current_flashing_text >= len(self.flashing_text):
                 self.current_flashing_text = 0
+
+        if self.frame % 5 == 0:
+            self.load_asset_current()
 
         self.loading_text = self.font.render(self.flashing_text[self.current_flashing_text], True, (255, 255, 255))
         self.loading_text_rect = self.loading_text.get_rect()
@@ -47,7 +131,44 @@ class LoadingScreen:
         pygame.display.update()
         pygame.time.delay(100)
 
-def load_screens(window, gstate_setter):
+class MenuScreen:
+    def __init__(self, window, gstate_setter):
+        self.window = window
+        self.gstate_setter = gstate_setter
+        self.buttons = []
+
+        self.buttons.append(
+            button(
+                (0, 0, 0),
+                self.window.get_width() / 2 - 100,
+                self.window.get_height() / 2 - 100,
+                200,
+                50,
+                "Play",
+            )
+        )
+    
+    def update(self):
+        for i in self.buttons:
+            i.is_over(mouse_pos)
+            i.x, i.y = self.window.get_width() / 2 - 100, self.window.get_height() / 2 - 100
+            if mouse_down and i.text == 'Play':
+                self.gstate_setter('LoadingScreen')
+
+    def draw(self):
+        for i in self.buttons:
+            i.draw(self.window)
+
+def load_screens(window, gstate_setter=set_gstate):
     screens = {}
     screens['LoadingScreen'] = LoadingScreen(window, gstate_setter)
+    screens['MenuScreen'] = MenuScreen(window, gstate_setter)
     return screens
+
+def draw_current_screen(screens, window):
+    window.fill((0, 0, 0))
+    screens[GSTATE].draw()
+    screens[GSTATE].update()
+    global mouse_pos, mouse_down
+    mouse_pos = pygame.mouse.get_pos()
+    mouse_down = pygame.mouse.get_pressed()[0]
