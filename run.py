@@ -30,13 +30,16 @@ if __name__ == '__main__':
     os_name = os.name
     if os_name == 'nt':
         display_spinner_while('Installing dependencies ', doit_windows)
-        print('\n')
+        time.sleep(1)
+        print('\r Installed dependencies')
         os.system('python __main__.py')
     elif os_name == 'posix':
         display_spinner_while('Installing dependencies ', doit_mac_linux)
-        print('\n')
+        time.sleep(1)
+        print('\r Installed dependencies')
         os.system('python3 __main__.py')
     else:
         display_spinner_while('Installing dependencies ', doit_mac_linux)
-        print('\n')
+        time.sleep(1)
+        print('\r Installed dependencies')
         os.system('python3 __main__.py')
