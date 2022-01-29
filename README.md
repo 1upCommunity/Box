@@ -8,7 +8,7 @@
 ## Features
 - A world generation system
 - A world editor
-- Simulates creatures called boxlanders, with whom you can interact with.
+- Simulates creatures called boxlanders. You can interact woth them.
 - There are many boxlanders in the world, and together they make a civilization.
 
 ## Installation
