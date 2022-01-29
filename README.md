@@ -12,6 +12,7 @@
 - There are many boxlanders in the world, and together they make a civilization.
 
 ## Installation
+- Needs git and python installed and added to path.
 ```
 git clone https://github.com/1upCommunity/Box.git
 cd Box
