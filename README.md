@@ -16,5 +16,5 @@
 ```
 git clone https://github.com/1upCommunity/Box.git
 cd Box
-python __main__.py
+python run.py
 ```
