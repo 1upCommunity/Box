@@ -2,7 +2,7 @@ import pygame
 import opensimplex
 import random
 import logging
-import os
+import os, sys
 pygame.init()
 logging.basicConfig(level=logging.DEBUG)
 
@@ -31,6 +31,7 @@ class button():
         self.height = height
         self.text = text
         self.font = pygame.font.Font("assets/press_start.ttf", 20)
+        self.callback = None
 
     def draw(self, win):
         pygame.draw.rect(win, self.color, (self.x,self.y,self.width,self.height),0)
@@ -45,10 +46,17 @@ class button():
             if pos[1] > self.y and pos[1] < self.y + self.height:
                 pygame.mouse.set_cursor(*pygame.cursors.tri_left)
                 self.color = BUTTON_COLOR_HOVER
+                if mouse_down:
+                    self.color = BUTTON_COLOR_PRESSED
+                    if self.callback != None:
+                        self.callback()
                 return True
         self.color = BUTTON_COLOR_NORMAL
         pygame.mouse.set_cursor(*pygame.cursors.arrow)
         return False
+
+    def on_click(self, callback):
+        self.callback = callback
 
 class LoadingScreen:
     def __init__(self, window, gstate_setter):
@@ -88,11 +96,11 @@ class LoadingScreen:
             if '.' in asset_name:
                 asset_type = asset_name.split('.')[1]
                 if asset_type == 'png':
-                    assets[asset_name] = pygame.image.load(asset_name)
+                    assets[asset_name.split('/')[1]] = pygame.image.load(asset_name)
                 elif asset_type == 'wav' or asset_type == 'mp3':
-                    assets[asset_name] = pygame.mixer.Sound(asset_name)
+                    assets[asset_name.split('/')[1]] = pygame.mixer.Sound(asset_name)
                 elif asset_type == 'ttf':
-                    assets[asset_name] = pygame.font.Font(asset_name, 20)
+                    assets[asset_name.split('/')[1]] = pygame.font.Font(asset_name, 20)
                 else:
                     logging.error("Unknown asset type: " + asset_type)
             else:
@@ -136,26 +144,55 @@ class MenuScreen:
         self.window = window
         self.gstate_setter = gstate_setter
         self.buttons = []
+        self.opensimplex = opensimplex.OpenSimplex(seed=random.randint(0, 1000000))
+        self.frame = 0
 
-        self.buttons.append(
+        self.buttons.extend([
             button(
                 (0, 0, 0),
-                self.window.get_width() / 2 - 100,
-                self.window.get_height() / 2 - 100,
+                self.window.get_width() / 2,
+                self.window.get_height() / 3 * 2,
                 200,
                 50,
                 "Play",
+            ),
+            button(
+                (0, 0, 0),
+                self.window.get_width() / 2,
+                self.window.get_height() / 4 * 3.5,
+                200,
+                50,
+                "Quit",
             )
-        )
+        ])
+        self.buttons[0].on_click(self.play_game)
+        self.buttons[1].on_click(self.quit_game)
+
+    def play_game(self):
+        self.gstate_setter('LoadingScreen')
+
+    def quit_game(self):
+        pygame.quit()
+        sys.exit()
     
     def update(self):
         for i in self.buttons:
             i.is_over(mouse_pos)
-            i.x, i.y = self.window.get_width() / 2 - 100, self.window.get_height() / 2 - 100
-            if mouse_down and i.text == 'Play':
-                self.gstate_setter('LoadingScreen')
+            if i.text == "Play":
+                i.x, i.y = self.window.get_width() / 2 - 100, self.window.get_height() / 3 * 2
+                if mouse_down:
+                    self.gstate_setter('LoadingScreen')
+            elif i.text == "Quit":
+                i.x, i.y = self.window.get_width() / 2 - 100, self.window.get_height() / 4 * 3.5
+        
+        self.frame += 1
 
     def draw(self):
+        self.box_icon = assets['Box.png']
+        xnoise = self.opensimplex.noise2(self.frame, -self.frame)
+        ynoise = self.opensimplex.noise2(-self.frame, self.frame)
+        self.window.blit(self.box_icon, (self.window.get_width() / 2 - self.box_icon.get_width() / 2 + xnoise, self.window.get_height() / 3 * 1 - self.box_icon.get_height() / 2 + ynoise))
+
         for i in self.buttons:
             i.draw(self.window)
 
