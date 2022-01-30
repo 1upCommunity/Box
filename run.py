@@ -19,6 +19,11 @@ def display_spinner_while(text, function):
     function()
     global running
     running = False
+    
+def pull():
+    os.system('git pull')
+    
+display_spinner_while('Updating repository ', pull)
 
 def doit_windows():
     subprocess.call(['depinstaller.bat'])
