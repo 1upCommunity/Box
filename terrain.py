@@ -23,15 +23,17 @@ def load_blocks(parent):
     return blocks
 
 class Chunk:
-    def __init__(self, parent, position):
-        self.parent= parent
+    def __init__(self, parent, position, _parent):
+        self.parent = parent
+        self._parent = _parent
         self.blocks = load_blocks(self)
         self.position = position
         self.position = [int(position[0]) * 32, int(position[1]) * 32]
+        self.xy_translate = self._parent.camera
+        self.xy_translate_ = self._parent.camera
 
         self.spritegroup = pygame.sprite.Group()
         self.block_instances = {}
-
 
     def add_block(self, blocktype, position):
         position = (position[0] * 32, position[1] * 32)
@@ -57,6 +59,16 @@ class Chunk:
             stonenoise = dirtnoise + abs(int(noise.noise2(x / 200, dirtnoise / 200) * 50)) + 40
             for y in range(dirtnoise , stonenoise):
                 self.add_block('stone', (x, y))
+
+    def update(self):
+        self.xy_translate = self._parent.camera
+
+        if self.xy_translate != self.xy_translate_:
+            self.xy_translate_ = self.xy_translate
+            for block in self.block_instances:
+                self.block_instances[block][0].rect.x = block[0] - self.xy_translate
+
+        self.xy_translate_ = self._parent.camera
 
 class CloudDisplay:
     def __init__(self, window, texture):
@@ -101,9 +113,10 @@ class Cloud:
         window.blit(self.sprite.image, self.sprite.rect)
 
 class World:
-    def __init__(self, window, textures):
+    def __init__(self, window, textures, parent):
         self.window = window
         self.textures = textures
+        self.parent = parent
         self.chunks = {}
 
         self.chunks[(0, 0)] = self.add_chunk((0, 0))
@@ -113,7 +126,7 @@ class World:
         self.cloud_display = CloudDisplay(self.window, self.textures['cloud.png'])
 
     def add_chunk(self, position):
-        chunk = Chunk(self, position)
+        chunk = Chunk(self, position, self.parent)
         self.chunks[position] = chunk
         return chunk
 
@@ -129,3 +142,5 @@ class World:
 
     def update(self):
         self.cloud_display.update()
+        for chunk in self.chunks.values():
+            chunk.update()
