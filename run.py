@@ -24,6 +24,7 @@ def pull():
     os.system('git pull')
     
 display_spinner_while('Updating repository ', pull)
+print('\r Update complete!')
 
 def doit_windows():
     subprocess.call(['depinstaller.bat'])
