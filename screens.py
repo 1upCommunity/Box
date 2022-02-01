@@ -194,8 +194,10 @@ class PlayScreen:
         self.gstate_setter = gstate_setter
         self.textures = assets
         self.generated = False
-        self.camera = 0
-        self.terminal_velocity = 3
+        self.x_speed = 0
+        self.x_move = 0.5
+        self.x = 0
+        self.terminal_velocity = 5
         
     def update(self):
         if not self.generated:
@@ -206,17 +208,18 @@ class PlayScreen:
 
         # Camera movement
         if pygame.key.get_pressed()[pygame.K_LEFT]:
-            self.camera -= .01
+            self.x_speed -= self.x_move
         if pygame.key.get_pressed()[pygame.K_RIGHT]:
-            self.camera += .01
+            self.x_speed += self.x_move
 
         # Camera bounds
-        if self.camera < 0 and self.camera < -self.terminal_velocity:
-            self.camera = -self.terminal_velocity
-        if self.camera > 0 and self.camera > self.terminal_velocity:
-            self.camera = self.terminal_velocity
+        if self.x_speed < 0 and self.x_speed < -self.terminal_velocity:
+            self.x_speed = -self.terminal_velocity
+        if self.x_speed > 0 and self.x_speed > self.terminal_velocity:
+            self.x_speed = self.terminal_velocity
 
-        self.camera *= .9
+        self.x_speed *= .96
+        self.x += self.x_speed
 
     def draw(self):
         if self.generated:

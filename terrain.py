@@ -29,8 +29,8 @@ class Chunk:
         self.blocks = load_blocks(self)
         self.position = position
         self.position = [int(position[0]) * 32, int(position[1]) * 32]
-        self.xy_translate = self._parent.camera
-        self.xy_translate_ = self._parent.camera
+        self.xy_translate = self._parent.x
+        self.xy_translate_ = self._parent.x
 
         self.spritegroup = pygame.sprite.Group()
         self.block_instances = {}
@@ -61,14 +61,14 @@ class Chunk:
                 self.add_block('stone', (x, y))
 
     def update(self):
-        self.xy_translate = self._parent.camera
+        self.xy_translate = self._parent.x
 
         if self.xy_translate != self.xy_translate_:
             self.xy_translate_ = self.xy_translate
             for block in self.block_instances:
                 self.block_instances[block][0].rect.x = block[0] - self.xy_translate
 
-        self.xy_translate_ = self._parent.camera
+        self.xy_translate_ = self._parent.x
 
 class CloudDisplay:
     def __init__(self, window, texture):
