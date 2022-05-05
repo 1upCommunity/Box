@@ -1,5 +1,5 @@
 import gym, numpy as np
-import  pygame, pymunk, logging, math
+import  pygame, pymunk, logging, math, random
 
 # get all loggers
 logging.basicConfig(level=logging.ERROR)
@@ -16,7 +16,7 @@ class WorldEnvironment(gym.Env):
 
         # create a box which the player has to touch
         self.player_box = pymunk.Body(1, 1)
-        self.player_box.position = ((32) * 6, 10)
+        self.player_box.position = ((32) * random.randint(-10, 10), 10)
         self.player_box_shape = pymunk.Poly.create_box(self.player_box, (32, 32))
         self.player_box_shape.friction = 0.5
         self.player_box_shape.collision_type = 1
@@ -42,9 +42,9 @@ class WorldEnvironment(gym.Env):
             self.velocity = (self.velocity[0] - 40, self.velocity[1] - 400)
         
         if self.position[1] > 10000:
-            reward = -100
+            reward += -100
             self.reset()
-            print("You fell off the world")
+            print(f"[{self.parent.name}] fell off the world")
 
         # if the player is touching the box, give a reward
         try:
@@ -52,18 +52,18 @@ class WorldEnvironment(gym.Env):
             pos_2 = self.parent.body.position
 
             if math.dist(pos_1, pos_2) < 65:
-                reward = 100 * 1 / self.time_lapsed
+                reward += 100 * 1 / self.time_lapsed
                 self.reset()
-                print("You got the box")
+                print(f"[{self.parent.name}] got the box")
         except Exception as e:
             print(e)
 
         # get distance to (0, 0)
         distance = math.dist((0, 0), self.position)
         if distance > 1000:
-            reward = 1 * distance / 1000
+            reward += 1 * distance / 1000
         else:
-            reward = -1 * distance / 1000
+            reward += -1 * distance / 1000
 
         return self.velocity, reward, False, {}
 
@@ -111,4 +111,8 @@ class Boxlander:
         self.frame += 1
 
         pygame.draw.circle(window, (255, 255, 255), (int(self.body.position[0] - self.parent.parent.x), int(self.body.position[1]) - self.parent.parent.y), 10)
+        # nametag
+        font = pygame.font.SysFont("comicsansms", 20)
+        text = font.render(self.name, True, (255, 255, 255))
+        window.blit(text, (int(self.body.position[0] - self.parent.parent.x) - text.get_width() // 2, int(self.body.position[1]) - self.parent.parent.y + 32 - text.get_height() // 2))
         pygame.draw.circle(window, (255, 0, 0), (int(self.env.player_box.position[0] - self.parent.parent.x), int(self.env.player_box.position[1]) - self.parent.parent.y), 10)

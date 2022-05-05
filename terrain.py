@@ -148,7 +148,9 @@ class World:
 
         self.space = pymunk.Space()
         self.space.gravity = (0, 900)
-        self.boxlanders["Boxy"] = Boxlander("Boxy", self)
+
+        for i in range(20):
+            self.boxlanders[f"Boxy{i}"] = Boxlander(f"Boxy{i}", self)
 
     def add_chunk(self, position):
         chunk = Chunk(self, position, self.parent)
