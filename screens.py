@@ -197,6 +197,9 @@ class PlayScreen:
         self.x_speed = 0
         self.x_move = 0.5
         self.x = 0
+        self.y_speed = 0
+        self.y_move = 0.5
+        self.y = 0
         self.terminal_velocity = 5
         
     def update(self):
@@ -211,15 +214,25 @@ class PlayScreen:
             self.x_speed -= self.x_move
         if pygame.key.get_pressed()[pygame.K_RIGHT]:
             self.x_speed += self.x_move
+        if pygame.key.get_pressed()[pygame.K_UP]:
+            self.y_speed -= self.y_move
+        if pygame.key.get_pressed()[pygame.K_DOWN]:
+            self.y_speed += self.y_move
 
         # Camera bounds
         if self.x_speed < 0 and self.x_speed < -self.terminal_velocity:
             self.x_speed = -self.terminal_velocity
         if self.x_speed > 0 and self.x_speed > self.terminal_velocity:
             self.x_speed = self.terminal_velocity
+        if self.y_speed < 0 and self.y_speed < -self.terminal_velocity:
+            self.y_speed = -self.terminal_velocity
+        if self.y_speed > 0 and self.y_speed > self.terminal_velocity:
+            self.y_speed = self.terminal_velocity
 
         self.x_speed *= .96
         self.x += self.x_speed
+        self.y_speed *= .96
+        self.y += self.y_speed
 
     def draw(self):
         if self.generated:

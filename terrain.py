@@ -1,4 +1,5 @@
 import pygame, opensimplex, random
+from person import Boxlander
 
 noise = opensimplex.OpenSimplex(seed=random.randint(0, 1000000))
 
@@ -29,8 +30,10 @@ class Chunk:
         self.blocks = load_blocks(self)
         self.position = position
         self.position = [int(position[0]) * 32, int(position[1]) * 32]
-        self.xy_translate = self._parent.x
-        self.xy_translate_ = self._parent.x
+        self.x_translate = 0
+        self.y_translate = 0
+        self.x_translate_ = 0
+        self.y_translate_ = 0
 
         self.spritegroup = pygame.sprite.Group()
         self.block_instances = {}
@@ -61,24 +64,30 @@ class Chunk:
                 self.add_block('stone', (x, y))
 
     def update(self):
-        self.xy_translate = self._parent.x
+        self.x_translate = self._parent.x
+        self.y_translate = self._parent.y
 
-        if self.xy_translate != self.xy_translate_:
-            self.xy_translate_ = self.xy_translate
+        if self.x_translate != self.x_translate_:
+            self.x_translate_ = self.x_translate
             for block in self.block_instances:
-                self.block_instances[block][0].rect.x = block[0] - self.xy_translate
+                self.block_instances[block][0].rect.x = block[0] - self.x_translate
 
-        self.xy_translate_ = self._parent.x
+        if self.y_translate != self.y_translate_:
+            self.y_translate_ = self.y_translate
+            for block in self.block_instances:
+                self.block_instances[block][0].rect.y = block[1] - self.y_translate
+        
 
 class CloudDisplay:
-    def __init__(self, window, texture):
+    def __init__(self, window, texture, world):
         self.window = window
         self.clouds = []
         self.texture = texture
         self.frame = 0
+        self.world = world
     
     def add_cloud(self, position):
-        self.clouds.append(Cloud(self.window, position, img=self.texture))
+        self.clouds.append(Cloud(self.window, position, self.texture, self))
 
     def update(self):
         for cloud in self.clouds:
@@ -96,7 +105,8 @@ class CloudDisplay:
             cloud.draw(self.window)
 
 class Cloud:
-    def __init__(self, window, position, img):
+    def __init__(self, window, position, img, parent):
+        self.parent = parent
         self.window = window
         self.position = list(position)
         self.sprite = pygame.sprite.Sprite()
@@ -106,8 +116,8 @@ class Cloud:
 
     def update(self):
         self.position[0] += self.speed / 10
-        self.sprite.rect.x = self.position[0]
-        self.sprite.rect.y = self.position[1]
+        self.sprite.rect.x = self.position[0] - self.parent.world.parent.x
+        self.sprite.rect.y = self.position[1] - self.parent.world.parent.y
 
     def draw(self, window):
         window.blit(self.sprite.image, self.sprite.rect)
@@ -118,12 +128,15 @@ class World:
         self.textures = textures
         self.parent = parent
         self.chunks = {}
+        self.boxlanders = {}
 
         self.chunks[(0, 0)] = self.add_chunk((0, 0))
         self.chunks[(1, 0)] = self.add_chunk((1, 0))
 
         self.sky_color = (63, 128, 186)
-        self.cloud_display = CloudDisplay(self.window, self.textures['cloud.png'])
+        self.cloud_display = CloudDisplay(self.window, self.textures['cloud.png'], self)
+
+        self.boxlanders["Boxy"] = Boxlander("Boxy", self)
 
     def add_chunk(self, position):
         chunk = Chunk(self, position, self.parent)
@@ -144,3 +157,9 @@ class World:
         self.cloud_display.update()
         for chunk in self.chunks.values():
             chunk.update()
+
+    def get_blocktype_at(self, position):
+        for chunk in self.chunks.values():
+            if position in chunk.block_instances:
+                return chunk.block_instances[position][1]
+        return "air"
