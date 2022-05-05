@@ -1,4 +1,4 @@
-import pygame, opensimplex, random
+import pygame, opensimplex, random, pymunk
 from person import Boxlander
 
 noise = opensimplex.OpenSimplex(seed=random.randint(0, 1000000))
@@ -45,6 +45,15 @@ class Chunk:
         sprite.rect = pygame.Rect(position[0], position[1], 32, 32)
         self.spritegroup.add(sprite)
         self.block_instances[position] = [sprite, blocktype]
+
+        # create physics body
+        body = pymunk.Body(body_type = pymunk.Body.STATIC)
+        body.position = position[0], position[1]
+        shape = pymunk.Poly.create_box(body, (32, 32))
+        shape.friction = 0.5
+        shape.collision_type = 1
+        self.parent.space.add(body, shape)
+
         return sprite
 
     def draw(self, window):
@@ -116,8 +125,8 @@ class Cloud:
 
     def update(self):
         self.position[0] += self.speed / 10
-        self.sprite.rect.x = self.position[0] - self.parent.world.parent.x
-        self.sprite.rect.y = self.position[1] - self.parent.world.parent.y
+        self.sprite.rect.x = self.position[0] - self.parent.world.parent.x - 16
+        self.sprite.rect.y = self.position[1] - self.parent.world.parent.y - 16
 
     def draw(self, window):
         window.blit(self.sprite.image, self.sprite.rect)
@@ -130,12 +139,15 @@ class World:
         self.chunks = {}
         self.boxlanders = {}
 
+        self.chunks[(-1, 0)] = self.add_chunk((-1, 0))
         self.chunks[(0, 0)] = self.add_chunk((0, 0))
         self.chunks[(1, 0)] = self.add_chunk((1, 0))
 
         self.sky_color = (63, 128, 186)
         self.cloud_display = CloudDisplay(self.window, self.textures['cloud.png'], self)
 
+        self.space = pymunk.Space()
+        self.space.gravity = (0, 900)
         self.boxlanders["Boxy"] = Boxlander("Boxy", self)
 
     def add_chunk(self, position):
@@ -149,17 +161,24 @@ class World:
             chunk.draw(self.window)
         self.cloud_display.draw()
 
+        for i in self.boxlanders.values():
+            i.render(self.window)
+
     def generate(self):
         for chunk in self.chunks.values():
             chunk.generate()
 
     def update(self):
+        self.space.step(0.02) 
         self.cloud_display.update()
         for chunk in self.chunks.values():
             chunk.update()
 
-    def get_blocktype_at(self, position):
+    def get_terrain_at(self, position):
         for chunk in self.chunks.values():
             if position in chunk.block_instances:
                 return chunk.block_instances[position][1]
         return "air"
+
+    def get_terrain_height_at(self, x):
+        return 10 + abs(int(noise.noise2(x/20, 0) * 10))
