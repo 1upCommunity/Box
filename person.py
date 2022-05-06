@@ -25,7 +25,15 @@ class WorldEnvironment(gym.Env):
         self.time_lapsed = 0
 
     def step(self, action):
-        # get a matrix of the terrain
+        # get a matrix of the terrain and store it in the observation space
+        try:
+            observation = self.parent.parent.get_terrain_matrix(self.position, fov=25)
+            # convert all strings to hash values
+            observation = np.array(observation, dtype=np.uint8)
+            observation = observation.reshape((25*2+1, 25*2+1, 1))
+        except Exception as e:
+            print(e)
+
         self.time_lapsed += 1
         reward = 0
         if action == 0:
@@ -65,7 +73,7 @@ class WorldEnvironment(gym.Env):
         else:
             reward += -1 * distance / 1000
 
-        return self.velocity, reward, False, {}
+        return observation, reward, False, {}
 
     def reset(self):
         self.parent.reset()

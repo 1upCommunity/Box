@@ -1,4 +1,4 @@
-import pygame, opensimplex, random, pymunk
+import pygame, opensimplex, random, pymunk, numpy as np
 from person import Boxlander
 
 noise = opensimplex.OpenSimplex(seed=random.randint(0, 1000000))
@@ -22,6 +22,14 @@ def load_blocks(parent):
     blocks['dirt'] = Blocktype('dirt', parent, parent.parent.textures['dirt.png'])
     blocks['stone'] = Blocktype('stone', parent, parent.parent.textures['stone.png'])
     return blocks
+
+def to_id(type):
+    if type == "grass":
+        return 1
+    elif type == "dirt":
+        return 2
+    elif type == "stone":
+        return 3
 
 class Chunk:
     def __init__(self, parent, position, _parent):
@@ -149,7 +157,7 @@ class World:
         self.space = pymunk.Space()
         self.space.gravity = (0, 900)
 
-        for i in range(20):
+        for i in range(25):
             self.boxlanders[f"Boxy{i}"] = Boxlander(f"Boxy{i}", self)
 
     def add_chunk(self, position):
@@ -179,8 +187,15 @@ class World:
     def get_terrain_at(self, position):
         for chunk in self.chunks.values():
             if position in chunk.block_instances:
-                return chunk.block_instances[position][1]
-        return "air"
+                return to_id(chunk.block_instances[position][1])
+        return 0
+
+    def get_terrain_matrix(self, position, fov):
+        position = list(position)
+        position[0] = int(position[0])
+        position[1] = int(position[1])
+        matrix = np.array([[self.get_terrain_at((x, y)) for x in range(position[0] - fov, position[0] + fov + 1)] for y in range(position[1] - fov, position[1] + fov + 1)])
+        return matrix
 
     def get_terrain_height_at(self, x):
         return 10 + abs(int(noise.noise2(x/20, 0) * 10))
