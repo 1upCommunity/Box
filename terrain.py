@@ -74,8 +74,6 @@ class Chunk:
         self.parent.space.remove(self.block_instances[position][3], self.block_instances[position][2])
         del self.block_instances[position]
 
-        del self.block_instances[position]
-
     def draw(self, window):
         self.spritegroup.draw(window)
 
@@ -214,8 +212,11 @@ class World:
         return 10 + abs(int(noise.noise2(x/20, 0) * 10))
 
     def remove_block(self, position):
-        try:
-            for chunk in self.chunks.values():
-                chunk.remove_block(position)        
-        except:
-            pass
+        for chunk in self.chunks.values():
+            try:
+                # get the block name
+                block_name = chunk.block_instances[position][1]
+                chunk.remove_block(position)
+                return block_name
+            except:
+                pass

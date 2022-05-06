@@ -6,7 +6,7 @@ logging.basicConfig(level=logging.ERROR)
 
 class WorldEnvironment(gym.Env):
     def __init__(self, terrain_world, parent):
-        self.action_space = gym.spaces.Discrete(10)
+        self.action_space = gym.spaces.Discrete(13)
         self.observation_space = gym.spaces.Box(low=0, high=255, shape=(84, 84, 1), dtype=np.uint8)
 
         self.velocity = (0, 0)
@@ -21,6 +21,8 @@ class WorldEnvironment(gym.Env):
         self.player_box_shape.friction = 0.5
         self.player_box_shape.collision_type = 1
         self.terrain_world.space.add(self.player_box, self.player_box_shape)
+
+        self.inventory = []
 
         self.time_lapsed = 0
 
@@ -52,19 +54,33 @@ class WorldEnvironment(gym.Env):
         elif action == 5:
             # break block above
             pos = int(self.position[0] / 32), int(self.position[1] / 32)
-            self.parent.parent.remove_block(pos)
+            block = self.parent.parent.remove_block(pos)
+            if block is not None:
+                self.inventory.append(block)
+                reward += .1
         elif action == 6:
             # break block below
             pos = int(self.position[0] / 32), int(self.position[1] / 32)
-            self.parent.parent.remove_block((pos[0], pos[1] + 1))
+            block = self.parent.parent.remove_block((pos[0], pos[1] + 1))
+            if block is not None:
+                self.inventory.append(block)
+                reward += .1
         elif action == 7:
             # break block left
             pos = int(self.position[0] / 32), int(self.position[1] / 32)
-            self.parent.parent.remove_block((pos[0]-1, pos[1]))
+            block = self.parent.parent.remove_block((pos[0]-1, pos[1]))
+            if block is not None:
+                self.inventory.append(block)
+                reward += .1
         elif action == 8:
             # break block right
             pos = int(self.position[0] / 32), int(self.position[1] / 32)
-            self.parent.parent.remove_block((pos[0]+1, pos[1]))
+            block = self.parent.parent.remove_block((pos[0]+1, pos[1]))
+            if block is not None:
+                self.inventory.append(block)
+                reward += .1
+
+        # TODO: 9-12: place blocks from inventory (if any)
         
         if self.position[1] > 10000:
             reward += -100
@@ -89,6 +105,9 @@ class WorldEnvironment(gym.Env):
             reward += 1 * distance / 1000
         else:
             reward += -1 * distance / 1000
+
+        # sort the inventory
+        self.inventory = sorted(self.inventory, key=lambda x: x)
 
         return observation, reward, False, {}
 
