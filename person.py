@@ -6,7 +6,7 @@ logging.basicConfig(level=logging.ERROR)
 
 class WorldEnvironment(gym.Env):
     def __init__(self, terrain_world, parent):
-        self.action_space = gym.spaces.Discrete(5)
+        self.action_space = gym.spaces.Discrete(10)
         self.observation_space = gym.spaces.Box(low=0, high=255, shape=(84, 84, 1), dtype=np.uint8)
 
         self.velocity = (0, 0)
@@ -48,6 +48,23 @@ class WorldEnvironment(gym.Env):
             self.velocity = (self.velocity[0] + 40, self.velocity[1] - 400)
         elif action == 4:
             self.velocity = (self.velocity[0] - 40, self.velocity[1] - 400)
+
+        elif action == 5:
+            # break block above
+            pos = int(self.position[0] / 32), int(self.position[1] / 32)
+            self.parent.parent.remove_block(pos)
+        elif action == 6:
+            # break block below
+            pos = int(self.position[0] / 32), int(self.position[1] / 32)
+            self.parent.parent.remove_block((pos[0], pos[1] + 1))
+        elif action == 7:
+            # break block left
+            pos = int(self.position[0] / 32), int(self.position[1] / 32)
+            self.parent.parent.remove_block((pos[0]-1, pos[1]))
+        elif action == 8:
+            # break block right
+            pos = int(self.position[0] / 32), int(self.position[1] / 32)
+            self.parent.parent.remove_block((pos[0]+1, pos[1]))
         
         if self.position[1] > 10000:
             reward += -100
@@ -111,7 +128,7 @@ class Boxlander:
         # apply force
         # clamp velocity
         self.body.velocity = self.body.velocity[0] + self.env.velocity[0], self.body.velocity[1] + self.env.velocity[1]
-        self.env.position = self.body.position
+        self.env.position = int(self.body.position[0]), int(self.body.position[1])
         self.env.velocity = (0, 0)
 
         #print(self.body.position)

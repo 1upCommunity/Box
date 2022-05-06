@@ -47,12 +47,13 @@ class Chunk:
         self.block_instances = {}
 
     def add_block(self, blocktype, position):
+        index = position
         position = (position[0] * 32, position[1] * 32)
         sprite = pygame.sprite.Sprite()
         sprite.image = self.blocks[blocktype].texture
         sprite.rect = pygame.Rect(position[0], position[1], 32, 32)
         self.spritegroup.add(sprite)
-        self.block_instances[position] = [sprite, blocktype]
+        self.block_instances[index] = [sprite, blocktype]
 
         # create physics body
         body = pymunk.Body(body_type = pymunk.Body.STATIC)
@@ -61,8 +62,19 @@ class Chunk:
         shape.friction = 0.5
         shape.collision_type = 1
         self.parent.space.add(body, shape)
+        self.block_instances[index].append(body)
+        self.block_instances[index].append(shape)
+
+        self.parent.blocks[index] = self.block_instances[index]
 
         return sprite
+
+    def remove_block(self, position):
+        self.block_instances[position][0].kill()
+        self.parent.space.remove(self.block_instances[position][3], self.block_instances[position][2])
+        del self.block_instances[position]
+
+        del self.block_instances[position]
 
     def draw(self, window):
         self.spritegroup.draw(window)
@@ -87,12 +99,12 @@ class Chunk:
         if self.x_translate != self.x_translate_:
             self.x_translate_ = self.x_translate
             for block in self.block_instances:
-                self.block_instances[block][0].rect.x = block[0] - self.x_translate
+                self.block_instances[block][0].rect.x = block[0]*32 - self.x_translate
 
         if self.y_translate != self.y_translate_:
             self.y_translate_ = self.y_translate
             for block in self.block_instances:
-                self.block_instances[block][0].rect.y = block[1] - self.y_translate
+                self.block_instances[block][0].rect.y = block[1]*32 - self.y_translate
         
 
 class CloudDisplay:
@@ -146,6 +158,7 @@ class World:
         self.parent = parent
         self.chunks = {}
         self.boxlanders = {}
+        self.blocks = {}
 
         self.chunks[(-1, 0)] = self.add_chunk((-1, 0))
         self.chunks[(0, 0)] = self.add_chunk((0, 0))
@@ -199,3 +212,10 @@ class World:
 
     def get_terrain_height_at(self, x):
         return 10 + abs(int(noise.noise2(x/20, 0) * 10))
+
+    def remove_block(self, position):
+        try:
+            for chunk in self.chunks.values():
+                chunk.remove_block(position)        
+        except:
+            pass
