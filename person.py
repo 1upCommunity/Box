@@ -14,17 +14,13 @@ class WorldEnvironment(gym.Env):
         self.terrain_world = terrain_world
         self.parent = parent
 
-        # create a box which the player has to touch
-        self.player_box = pymunk.Body(1, 1)
-        self.player_box.position = ((32) * random.randint(-10, 10), 10)
-        self.player_box_shape = pymunk.Poly.create_box(self.player_box, (32, 32))
-        self.player_box_shape.friction = 0.5
-        self.player_box_shape.collision_type = 1
-        self.terrain_world.space.add(self.player_box, self.player_box_shape)
-
         self.inventory = []
-
         self.time_lapsed = 0
+
+    def play_sound(self):
+        # play self.parent.parent.parent.assets.get("coin.wav")
+        sound = self.parent.parent.parent.textures.get("coin.wav")
+        pygame.mixer.Sound.play(sound)
 
     def step(self, action):
         # get a matrix of the terrain and store it in the observation space
@@ -33,6 +29,10 @@ class WorldEnvironment(gym.Env):
             # convert all strings to hash values
             observation = np.array(observation, dtype=np.uint8)
             observation = observation.reshape((25*2+1, 25*2+1, 1))
+        
+            if action > 8 and action < 13 and random.randint(0, 10) == 0:
+                self.play_sound()
+
         except Exception as e:
             print(e)
 
@@ -57,30 +57,61 @@ class WorldEnvironment(gym.Env):
             block = self.parent.parent.remove_block(pos)
             if block is not None:
                 self.inventory.append(block)
-                reward += .1
         elif action == 6:
             # break block below
             pos = int(self.position[0] / 32), int(self.position[1] / 32)
             block = self.parent.parent.remove_block((pos[0], pos[1] + 1))
             if block is not None:
                 self.inventory.append(block)
-                reward += .1
         elif action == 7:
             # break block left
             pos = int(self.position[0] / 32), int(self.position[1] / 32)
             block = self.parent.parent.remove_block((pos[0]-1, pos[1]))
             if block is not None:
                 self.inventory.append(block)
-                reward += .1
         elif action == 8:
             # break block right
             pos = int(self.position[0] / 32), int(self.position[1] / 32)
             block = self.parent.parent.remove_block((pos[0]+1, pos[1]))
             if block is not None:
                 self.inventory.append(block)
-                reward += .1
 
-        # TODO: 9-12: place blocks from inventory (if any)
+        elif action == 9:
+            # place block above
+            try:
+                pos = int(self.position[0] / 32), int(self.position[1] / 32)
+                if len(self.inventory) > 0:
+                    block = self.inventory.pop()
+                    self.parent.parent.place_block(pos, block)
+            except Exception as e:
+                print(e)
+        elif action == 10:
+            # place block below
+            try:
+                pos = int(self.position[0] / 32), int(self.position[1] / 32)
+                if len(self.inventory) > 0:
+                    block = self.inventory.pop()
+                    self.parent.parent.place_block((pos[0], pos[1] + 1), block)
+            except Exception as e:
+                print(e)
+        elif action == 11:
+            # place block left
+            try:
+                pos = int(self.position[0] / 32), int(self.position[1] / 32)
+                if len(self.inventory) > 0:
+                    block = self.inventory.pop()
+                    self.parent.parent.place_block((pos[0]-1, pos[1]), block)
+            except Exception as e:
+                print(e)
+        elif action == 12:
+            # place block right
+            try:
+                pos = int(self.position[0] / 32), int(self.position[1] / 32)
+                if len(self.inventory) > 0:
+                    block = self.inventory.pop()
+                    self.parent.parent.place_block((pos[0]+1, pos[1]), block)
+            except Exception as e:
+                print(e)
         
         if self.position[1] > 10000:
             reward += -100
@@ -89,13 +120,7 @@ class WorldEnvironment(gym.Env):
 
         # if the player is touching the box, give a reward
         try:
-            pos_1 = self.player_box.position
-            pos_2 = self.parent.body.position
-
-            if math.dist(pos_1, pos_2) < 65:
-                reward += 100 * 1 / self.time_lapsed
-                self.reset()
-                print(f"[{self.parent.name}] got the box")
+            reward += 100 * 1 / self.time_lapsed
         except Exception as e:
             print(e)
 
@@ -159,4 +184,3 @@ class Boxlander:
         font = pygame.font.SysFont("comicsansms", 20)
         text = font.render(self.name, True, (255, 255, 255))
         window.blit(text, (int(self.body.position[0] - self.parent.parent.x) - text.get_width() // 2, int(self.body.position[1]) - self.parent.parent.y + 32 - text.get_height() // 2))
-        pygame.draw.circle(window, (255, 0, 0), (int(self.env.player_box.position[0] - self.parent.parent.x), int(self.env.player_box.position[1]) - self.parent.parent.y), 10)

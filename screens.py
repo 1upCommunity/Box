@@ -162,14 +162,22 @@ class MenuScreen:
         self.buttons[0].on_click(self.play_game)
         self.buttons[1].on_click(self.quit_game)
 
+        self.music = False
+
     def play_game(self):
         self.gstate_setter('PlayScreen')
+        pygame.mixer.stop()
 
     def quit_game(self):
+        pygame.mixer.stop()
         pygame.quit()
         sys.exit()
     
     def update(self):
+        if not self.music:
+            #pygame.mixer.Sound.play(assets['music_slow.mp3'])
+            self.music = True
+
         for i in self.buttons:
             i.is_over(mouse_pos)
             if i.text == "Play":
@@ -201,12 +209,14 @@ class PlayScreen:
         self.y_move = 0.5
         self.y = 0
         self.terminal_velocity = 5
+
         
     def update(self):
         if not self.generated:
             self.world = World(self.window, assets, self)
             self.world.generate()
             self.generated = True
+            #pygame.mixer.Sound.play(assets['music_fast.mp3'])
         self.world.update()
 
         # Camera movement

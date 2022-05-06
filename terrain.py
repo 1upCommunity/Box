@@ -1,7 +1,12 @@
+from email.policy import default
 import pygame, opensimplex, random, pymunk, numpy as np
 from person import Boxlander
 
 noise = opensimplex.OpenSimplex(seed=random.randint(0, 1000000))
+
+default_props = {
+    "breakable": True,
+}
 
 class Blocktype:
     def __init__(self, name, parent, texture):
@@ -10,17 +15,29 @@ class Blocktype:
         self.texture = texture
         self.instances = []
 
+        self.props = default_props.copy()
+
     def add_instance(self, position):
         self.instances.append([position, self.add_to_parent(position)])
         
     def add_to_parent(self, position):
         return self.parent.add_block(self, position, self.texture)
 
+def create_block(name, parent, texture, props=default_props.copy()):
+    _ = Blocktype(name, parent, parent.parent.textures[texture],)
+    _.props = props
+    return _
+
 def load_blocks(parent):
     blocks = {}
-    blocks['grass'] = Blocktype('grass', parent, parent.parent.textures['grass.png'])
-    blocks['dirt'] = Blocktype('dirt', parent, parent.parent.textures['dirt.png'])
-    blocks['stone'] = Blocktype('stone', parent, parent.parent.textures['stone.png'])
+    blocks['grass'] = create_block('grass', parent, 'grass.png')
+    blocks['dirt'] = create_block('dirt', parent, 'dirt.png')
+    blocks['stone'] = create_block('stone', parent, 'stone.png')
+    blocks['bedrock'] = create_block('bedrock', parent, 'bedrock.png', {"breakable": False})
+    blocks['coal_ore'] = create_block('coal_ore', parent, 'coal_ore.png')
+    blocks['iron_ore'] = create_block('iron_ore', parent, 'iron_ore.png')
+    blocks['diamond_ore'] = create_block('diamond_ore', parent, 'diamond_ore.png')
+    blocks['lapis_ore'] = create_block('lapis_ore', parent, 'lapis_ore.png')
     return blocks
 
 def to_id(type):
@@ -70,9 +87,11 @@ class Chunk:
         return sprite
 
     def remove_block(self, position):
-        self.block_instances[position][0].kill()
-        self.parent.space.remove(self.block_instances[position][3], self.block_instances[position][2])
-        del self.block_instances[position]
+        # check if block is breakable
+        if self.blocks[self.block_instances[position][1]].props["breakable"]:
+            self.block_instances[position][0].kill()
+            self.parent.space.remove(self.block_instances[position][3], self.block_instances[position][2])
+            del self.block_instances[position]
 
     def draw(self, window):
         self.spritegroup.draw(window)
@@ -89,6 +108,10 @@ class Chunk:
             stonenoise = dirtnoise + abs(int(noise.noise2(x / 200, dirtnoise / 200) * 50)) + 40
             for y in range(dirtnoise , stonenoise):
                 self.add_block('stone', (x, y))
+
+            # bedrock
+            for i in range(0, 3):
+                self.add_block('bedrock', (x, stonenoise - i))
 
     def update(self):
         self.x_translate = self._parent.x
@@ -168,7 +191,7 @@ class World:
         self.space = pymunk.Space()
         self.space.gravity = (0, 900)
 
-        for i in range(25):
+        for i in range(20):
             self.boxlanders[f"Boxy{i}"] = Boxlander(f"Boxy{i}", self)
 
     def add_chunk(self, position):
@@ -220,3 +243,16 @@ class World:
                 return block_name
             except:
                 pass
+        
+        return None
+
+    def place_block(self, position, block_name):
+        try:
+            for chunk in self.chunks.values():
+                if position in chunk.block_instances:
+                    return False
+                else:
+                    chunk.add_block(block_name, position)
+                    return True
+        except Exception as e:
+            print(e)
