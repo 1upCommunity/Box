@@ -84,7 +84,7 @@ class WorldEnvironment(gym.Env):
                     block = self.inventory.pop()
                     self.parent.parent.place_block(pos, block)
             except Exception as e:
-                print(e)
+                pass
         elif action == 10:
             # place block below
             try:
@@ -93,7 +93,7 @@ class WorldEnvironment(gym.Env):
                     block = self.inventory.pop()
                     self.parent.parent.place_block((pos[0], pos[1] + 1), block)
             except Exception as e:
-                print(e)
+                pass
         elif action == 11:
             # place block left
             try:
@@ -102,7 +102,7 @@ class WorldEnvironment(gym.Env):
                     block = self.inventory.pop()
                     self.parent.parent.place_block((pos[0]-1, pos[1]), block)
             except Exception as e:
-                print(e)
+                pass
         elif action == 12:
             # place block right
             try:
@@ -111,7 +111,7 @@ class WorldEnvironment(gym.Env):
                     block = self.inventory.pop()
                     self.parent.parent.place_block((pos[0]+1, pos[1]), block)
             except Exception as e:
-                print(e)
+                pass
         
         if self.position[1] > 10000:
             reward += -100

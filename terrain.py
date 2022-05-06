@@ -23,6 +23,30 @@ class Blocktype:
     def add_to_parent(self, position):
         return self.parent.add_block(self, position, self.texture)
 
+class Structure:
+    def __init__(self, name, parent):
+        self.name = name
+        self.parent = parent
+
+    def generate(self, position):
+        self._generate(position)
+
+class TreeGenerator(Structure):
+    def __init__(self, parent):
+        super().__init__("Tree", parent)
+        
+    def _generate(self, position):
+        self.trunk_height = random.randint(5, 7)
+        self.width = random.randint(2, 3) # width and height of the leafs
+        self.height = random.randint(2, 3)
+
+        for i in range(position[0]-self.width, position[0]+self.width):
+            for j in range(position[1]-self.height, position[1]+self.height):
+                if not i == position[0] and not j == position[1]:
+                    self.parent.place_block((i, j), "leaf")
+                else:
+                    self.parent.place_block((i, j), "log")
+
 def create_block(name, parent, texture, props=default_props.copy()):
     _ = Blocktype(name, parent, parent.parent.textures[texture],)
     _.props = props
@@ -38,6 +62,8 @@ def load_blocks(parent):
     blocks['iron_ore'] = create_block('iron_ore', parent, 'iron_ore.png')
     blocks['diamond_ore'] = create_block('diamond_ore', parent, 'diamond_ore.png')
     blocks['lapis_ore'] = create_block('lapis_ore', parent, 'lapis_ore.png')
+    blocks['log'] = create_block('log_birch', parent, 'log_birch.png')
+    blocks['leaf'] = create_block('leaf_birch', parent, 'double_plant_paeonia_bottom.png')
     return blocks
 
 def to_id(type):
@@ -96,19 +122,37 @@ class Chunk:
     def draw(self, window):
         self.spritegroup.draw(window)
 
+    def get_cave_noise(self, position):
+        return noise.noise2(position[0]/8, position[1]/8)
+
     def generate(self):
         for x in range(self.position[0], self.position[0] + 32):
             grassnoise = 10 + abs(int(noise.noise2(x/20, 0) * 10))
+            treenoise = 10 + abs(int(noise.noise2(x/25, 0) * 10))
+
+            if treenoise > grassnoise:
+                self.parent.generators["tree"].generate((x, grassnoise))
+
             self.add_block('grass', (x, grassnoise))
 
             dirtnoise = grassnoise + 1 + abs(int(noise.noise2(x / 22, grassnoise / 200) * 5))
             for y in range(grassnoise + 1, dirtnoise):
-                self.add_block('dirt', (x, y))
+                if not self.get_cave_noise((x, y)) > 0.3:
+                    self.add_block('dirt', (x, y))
             
             stonenoise = dirtnoise + abs(int(noise.noise2(x / 200, dirtnoise / 200) * 50)) + 40
             for y in range(dirtnoise , stonenoise):
-                self.add_block('stone', (x, y))
-
+                if not self.get_cave_noise((x, y)) > 0.2:
+                    self.add_block('stone', (x, y))
+                    cave_noise = self.get_cave_noise((x, y))
+                    if cave_noise < -0.52 and cave_noise > -0.54:
+                        self.add_block('coal_ore', (x, y))
+                    elif cave_noise < -0.54 and cave_noise > -0.56:
+                        self.add_block('iron_ore', (x, y))
+                    elif cave_noise < -0.56 and cave_noise > -0.58:
+                        self.add_block('diamond_ore', (x, y))
+                    elif cave_noise < -0.58 and cave_noise > -0.7:
+                        self.add_block('lapis_ore', (x, y))
             # bedrock
             for i in range(0, 3):
                 self.add_block('bedrock', (x, stonenoise - i))
@@ -181,15 +225,16 @@ class World:
         self.boxlanders = {}
         self.blocks = {}
 
-        self.chunks[(-1, 0)] = self.add_chunk((-1, 0))
-        self.chunks[(0, 0)] = self.add_chunk((0, 0))
-        self.chunks[(1, 0)] = self.add_chunk((1, 0))
-
         self.sky_color = (63, 128, 186)
         self.cloud_display = CloudDisplay(self.window, self.textures['cloud.png'], self)
 
         self.space = pymunk.Space()
         self.space.gravity = (0, 900)
+
+        self.xpos = 0
+        self.render_distance = 3
+
+        self.generators = {"tree": TreeGenerator(self)}
 
         for i in range(20):
             self.boxlanders[f"Boxy{i}"] = Boxlander(f"Boxy{i}", self)
@@ -209,6 +254,12 @@ class World:
             i.render(self.window)
 
     def generate(self):
+        self.chunks = {}
+
+        for i in range(self.xpos - self.render_distance, self.xpos + self.render_distance):
+            if i not in self.chunks:
+                self.add_chunk((i, 0))
+
         for chunk in self.chunks.values():
             chunk.generate()
 
@@ -217,7 +268,23 @@ class World:
         self.cloud_display.update()
         for chunk in self.chunks.values():
             chunk.update()
+        try:
+            x_pos = 0
+            for i in self.boxlanders.values():
+                x_pos += i.env.position[0]
+            x_pos /= len(self.boxlanders.values())
+            x_pos = int(x_pos / (32 * 32))
 
+            if abs(x_pos - self.xpos) > self.render_distance:
+                if x_pos > self.xpos:
+                    self.xpos += 1
+                    self.generate()
+                elif x_pos < self.xpos:
+                    self.xpos -= 1
+                    self.generate()
+        except Exception as e:
+            print(e)
+        
     def get_terrain_at(self, position):
         for chunk in self.chunks.values():
             if position in chunk.block_instances:
