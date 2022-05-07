@@ -4,6 +4,41 @@ import  pygame, pymunk, logging, math, random
 # get all loggers
 logging.basicConfig(level=logging.ERROR)
 
+class QTable:
+    def __init__(self, env):
+        self.env = env
+
+        self._init = False
+
+        self.alpha = 0.1
+        self.gamma = 0.9
+        self.epsilon = 0.1
+
+    def choose_action(self, state):
+        try:
+            if self._init:
+                if random.randrange(0, 100) > self.epsilon * 100:
+                    return self.env.action_space.sample()
+                else:
+                    return np.argmax(self.table[state])
+        except Exception as e:
+            print(e)
+            return self.env.action_space.sample()
+
+    def update(self, state, action, reward, next_state):
+        if not self._init:
+            _ = len(np.array(self.env.observation).flatten())
+            self.table = np.zeros([_, self.env.action_space.n])
+            self._init = True
+        try:
+            self.table[state][action] = (1 - self.alpha) * self.table[state][action] + self.alpha * (reward + self.gamma * np.max(self.table[next_state]))
+        except Exception as e:
+            print(e)
+
+    def get_table(self):
+        if self._init:
+            return self.table
+
 class WorldEnvironment(gym.Env):
     def __init__(self, terrain_world, parent):
         self.action_space = gym.spaces.Discrete(13)
@@ -17,6 +52,8 @@ class WorldEnvironment(gym.Env):
         self.inventory = []
         self.time_lapsed = 0
 
+        self.qtable = QTable(self)
+
     def play_sound(self):
         # play self.parent.parent.parent.assets.get("coin.wav")
         sound = self.parent.parent.parent.textures.get("coin.wav")
@@ -26,9 +63,9 @@ class WorldEnvironment(gym.Env):
         # get a matrix of the terrain and store it in the observation space
         try:
             observation = self.parent.parent.get_terrain_matrix(self.position, fov=25)
-            # convert all strings to hash values
-            observation = np.array(observation, dtype=np.uint8)
-            observation = observation.reshape((25*2+1, 25*2+1, 1))
+            # convert dict to numpy array
+            observation = np.array(list(observation.values()), dtype=np.uint8)
+            self.observation = observation
         
             if action > 8 and action < 13 and random.randint(0, 10) == 0:
                 self.play_sound()
@@ -134,6 +171,10 @@ class WorldEnvironment(gym.Env):
         # sort the inventory
         self.inventory = sorted(self.inventory, key=lambda x: x)
 
+        try:
+            self.qtable.update(self.observation, action, reward, self.qtable.choose_action(self.observation))
+        except:
+            pass
         return observation, reward, False, {}
 
     def reset(self):
@@ -168,7 +209,10 @@ class Boxlander:
 
     def render(self, window):
         if self.frame % 60 == 0:
-            self.env.step(self.env.action_space.sample())
+            try:
+                self.env.step(self.env.qtable.choose_action(self.env.observation))
+            except:
+                self.env.step(self.env.action_space.sample())
         # apply force
         # clamp velocity
         self.body.velocity = self.body.velocity[0] + self.env.velocity[0], self.body.velocity[1] + self.env.velocity[1]

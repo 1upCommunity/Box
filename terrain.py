@@ -68,11 +68,26 @@ def load_blocks(parent):
 
 def to_id(type):
     if type == "grass":
-        return 1
+        ret = 1
     elif type == "dirt":
-        return 2
+        ret = 2
     elif type == "stone":
-        return 3
+        ret = 3
+    elif type == "bedrock":
+        ret = 4
+    elif type == "coal_ore":
+        ret = 5
+    elif type == "iron_ore":
+        ret = 6
+    elif type == "diamond_ore":
+        ret = 7
+    elif type == "lapis_ore":
+        ret = 8
+    elif type == "log":
+        ret = 9
+    elif type == "leaf":
+        ret = 10
+    return ret 
 
 class Chunk:
     def __init__(self, parent, position, _parent):
@@ -96,7 +111,6 @@ class Chunk:
         sprite.image = self.blocks[blocktype].texture
         sprite.rect = pygame.Rect(position[0], position[1], 32, 32)
         self.spritegroup.add(sprite)
-        self.block_instances[index] = [sprite, blocktype]
 
         # create physics body
         body = pymunk.Body(body_type = pymunk.Body.STATIC)
@@ -105,8 +119,8 @@ class Chunk:
         shape.friction = 0.5
         shape.collision_type = 1
         self.parent.space.add(body, shape)
-        self.block_instances[index].append(body)
-        self.block_instances[index].append(shape)
+
+        self.block_instances[index] = [sprite, blocktype, body, shape]
 
         self.parent.blocks[index] = self.block_instances[index]
 
@@ -164,13 +178,12 @@ class Chunk:
         if self.x_translate != self.x_translate_:
             self.x_translate_ = self.x_translate
             for block in self.block_instances:
-                self.block_instances[block][0].rect.x = block[0]*32 - self.x_translate
+                self.block_instances[block][0].rect.x = self.block_instances[block][2].position[0] - self.x_translate
 
         if self.y_translate != self.y_translate_:
             self.y_translate_ = self.y_translate
             for block in self.block_instances:
-                self.block_instances[block][0].rect.y = block[1]*32 - self.y_translate
-        
+                self.block_instances[block][0].rect.y = self.block_instances[block][2].position[1] - self.y_translate
 
 class CloudDisplay:
     def __init__(self, window, texture, world):
@@ -236,7 +249,7 @@ class World:
 
         self.generators = {"tree": TreeGenerator(self)}
 
-        for i in range(20):
+        for i in range(25):
             self.boxlanders[f"Boxy{i}"] = Boxlander(f"Boxy{i}", self)
 
     def add_chunk(self, position):
@@ -293,9 +306,12 @@ class World:
 
     def get_terrain_matrix(self, position, fov):
         position = list(position)
-        position[0] = int(position[0])
-        position[1] = int(position[1])
-        matrix = np.array([[self.get_terrain_at((x, y)) for x in range(position[0] - fov, position[0] + fov + 1)] for y in range(position[1] - fov, position[1] + fov + 1)])
+        position[0] = int(position[0] / 32)
+        position[1] = int(position[1] / 32)
+        matrix = {}
+        for i in range(-fov, fov):
+            for j in range(-fov, fov):
+                matrix[(i, j)] = self.get_terrain_at((position[0] + i, position[1] + j))
         return matrix
 
     def get_terrain_height_at(self, x):

@@ -4,7 +4,7 @@ import random
 import logging
 import os, sys
 pygame.init()
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.ERROR)
 
 from terrain import *
 
