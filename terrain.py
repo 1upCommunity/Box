@@ -1,4 +1,3 @@
-from email.policy import default
 import pygame, opensimplex, random, pymunk, numpy as np
 from person import Boxlander
 
@@ -236,6 +235,7 @@ class World:
         self.parent = parent
         self.chunks = {}
         self.boxlanders = {}
+        self.entities = {}
         self.blocks = {}
 
         self.sky_color = (63, 128, 186)
@@ -249,8 +249,9 @@ class World:
 
         self.generators = {"tree": TreeGenerator(self)}
 
-        for i in range(25):
+        for i in range(6):
             self.boxlanders[f"Boxy{i}"] = Boxlander(f"Boxy{i}", self)
+            self.entities[f"Boxy{i}"] = self.boxlanders[f"Boxy{i}"]
 
     def add_chunk(self, position):
         chunk = Chunk(self, position, self.parent)
@@ -281,22 +282,6 @@ class World:
         self.cloud_display.update()
         for chunk in self.chunks.values():
             chunk.update()
-        try:
-            x_pos = 0
-            for i in self.boxlanders.values():
-                x_pos += i.env.position[0]
-            x_pos /= len(self.boxlanders.values())
-            x_pos = int(x_pos / (32 * 32))
-
-            if abs(x_pos - self.xpos) > self.render_distance:
-                if x_pos > self.xpos:
-                    self.xpos += 1
-                    self.generate()
-                elif x_pos < self.xpos:
-                    self.xpos -= 1
-                    self.generate()
-        except Exception as e:
-            print(e)
         
     def get_terrain_at(self, position):
         for chunk in self.chunks.values():
@@ -339,3 +324,12 @@ class World:
                     return True
         except Exception as e:
             print(e)
+
+    def attack(self, position, damage = 1):
+        for entity in self.entities.values():
+            # round the position to the nearest block
+            _position = (int(entity.env.position[0] / 32) * 32, int(entity.env.position[1] / 32) * 32)
+            if _position == position:
+                entity.env.health -= damage
+                return entity.env.name
+        return None
