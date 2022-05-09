@@ -220,6 +220,8 @@ class WorldEnvironment(gym.Env):
         # generate action id from tensor
         if not isinstance(action, int):
             action = action.argmax()
+            if action > 8 and action < 13 and random.randint(0, 3) == 0:
+                self.play_sound()
         if action == 0:
             self.velocity = (self.velocity[0] + 40, self.velocity[1])
         elif action == 1:
@@ -316,6 +318,9 @@ class WorldEnvironment(gym.Env):
             self.reset()
             print(f"[{self.parent.name}] fell off the world")
 
+        # reward on inventory size
+        reward += len(self.inventory) / 10
+
         if len(self.scheduled_rewards) > 0:
             reward += self.scheduled_rewards.pop(0)
 
@@ -398,12 +403,11 @@ class Boxlander:
                 pass
 
         if self.frame % 20 == 0:
-            if random.random() < self.epsilon and self.epsilon > MIN_EPSILON:
+            if random.randint(0, 100) < self.epsilon * 100 and self.epsilon > MIN_EPSILON:
                 self.env.step(self.env.action_space.sample())
                 self.epsilon *= ELIPSON_DECAY
             else:
                 _ = self.env.agent.get_qs(self.env.get_observation())
-                print(_)
                 self.env.step(_)
         # apply force
         # clamp velocity
