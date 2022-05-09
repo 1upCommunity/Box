@@ -249,9 +249,16 @@ class World:
 
         self.generators = {"tree": TreeGenerator(self)}
 
+        self.collision_handler = self.space.add_collision_handler(1, 1)
+        self.collision_handler.begin = self.begin_collision
+
         for i in range(6):
             self.boxlanders[f"Boxy{i}"] = Boxlander(f"Boxy{i}", self)
-            self.entities[f"Boxy{i}"] = self.boxlanders[f"Boxy{i}"]
+        self.collisions = []
+
+    def begin_collision(self, arbiter, space, data):
+        self.collisions.append(arbiter)
+        return True
 
     def add_chunk(self, position):
         chunk = Chunk(self, position, self.parent)
@@ -293,10 +300,10 @@ class World:
         position = list(position)
         position[0] = int(position[0] / 32)
         position[1] = int(position[1] / 32)
-        matrix = {}
+        matrix = np.array(np.zeros((fov*2+1, fov*2+1)))
         for i in range(-fov, fov):
             for j in range(-fov, fov):
-                matrix[(i, j)] = self.get_terrain_at((position[0] + i, position[1] + j))
+                matrix[i + fov, j + fov] = self.get_terrain_at((position[0] + i, position[1] + j))
         return matrix
 
     def get_terrain_height_at(self, x):
@@ -326,10 +333,12 @@ class World:
             print(e)
 
     def attack(self, position, damage = 1):
-        for entity in self.entities.values():
+        for _ in self.entities.values():
+            entity = self.entities[_.name]
             # round the position to the nearest block
             _position = (int(entity.env.position[0] / 32) * 32, int(entity.env.position[1] / 32) * 32)
             if _position == position:
                 entity.env.health -= damage
+                print(entity.env.name)
                 return entity.env.name
         return None
